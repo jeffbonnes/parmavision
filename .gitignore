@@ -2,3 +2,7 @@ tmp
 
 /build/
 /.settings/
+/.project
+/manifest
+.DS_Store
+/Resources/android/.DS_Store
