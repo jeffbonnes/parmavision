@@ -1,5 +1,15 @@
 var isAndroid = Ti.Platform.osname == 'android';
 
+if (isAndroid) {
+	// Landscape Mode
+	var screenWidth = Ti.Platform.displayCaps.platformHeight;
+	var screenHeight = Ti.Platform.displayCaps.platformWidth;
+} else {
+	var screenWidth = Ti.Platform.displayCaps.platformWidth;
+	var screenHeight = Ti.Platform.displayCaps.platformHeight;
+}
+
+// Setup the location  properties for callbacks
 Ti.Geolocation.headingFilter = 1;
 Ti.Geolocation.showCalibration = false;
 
@@ -10,9 +20,10 @@ if (isAndroid) {
 	Ti.Geolocation.distanceFilter = 10;
 	Ti.Geolocation.preferredProvider = "gps";
 	Ti.Geolocation.accuracy = Ti.Geolocation.ACCURACY_NEAREST_TEN_METERS;
-	Ti.Geolocation.purpose = Ti.Locale.getString('gps_purpose');
+	Ti.Geolocation.purpose = "Augmented Reality";
 }
 
+// function to create the window
 exports.createARWindow = function(params) {
 
 	function showAR() {
@@ -47,20 +58,34 @@ exports.createARWindow = function(params) {
 		}, 500);
 	}
 
+	var views = [];
+	var colors = ['red', 'yellow', 'pink', 'green', 'purple', 'orange', 'blue', 'white', 'silver'];
+
 	var overlay = Ti.UI.createView({
 		top : 0,
-		bottom : 0,
-		left : 0,
-		right : 0,
+		height : screenHeight,
+		left : 0 - (screenWidth / 2),
+		width : screenWidth * 2 / 3,
 		backgroundColor : 'transparent'
 	});
 
+	for (var i = 0; i < colors.length; i++) {
+		views[i] = Ti.UI.createView({
+			top : 0,
+			height : screenHeight,
+			right : 0,
+			width : screenWidth,
+			backgroundColor : colors[i],
+			opacity : 0.5
+		});
+		overlay.add(views[i]);
+	};
+
 	var label = Ti.UI.createLabel({
-		bottom : 10,
-		height : 20,
-		right : 10,
+		bottom : '20dp',
+		height : '20dp',
 		text : "test",
-		textAlign : 'right',
+		textAlign : 'center',
 		color : 'white',
 	});
 
@@ -70,8 +95,50 @@ exports.createARWindow = function(params) {
 		overlay.addEventListener('click', closeAR);
 	}
 
+	var lastActiveView = -1;
+	var viewChange = false;
+
 	function headingCallback(e) {
-		label.text = JSON.stringify(e.heading.magneticHeading);
+		var currBearing = e.heading.trueHeading;
+		var internalBearing = currBearing / (360 / views.length);
+		var activeView = Math.floor(internalBearing);
+		var pixelOffset = Math.floor((internalBearing % 1) * screenWidth);
+
+		if (activeView != lastActiveView) {
+			viewChange = true;
+			lastActiveView = activeView;
+		} else {
+			viewChange = true;
+		}
+
+		for (var i = 0; i < views.length; i++) {
+			var diff = activeView - i;
+			if (diff >= -1 && diff <= 1) {
+				if (viewChange) {
+					views[i].visible = true;
+				}
+				views[i].right = pixelOffset + (diff * screenWidth);
+			} else {
+				if (viewChange) {
+					views[i].visible = false;
+				}
+			}
+		}
+
+		if (activeView == 0) {
+			if (viewChange) {
+				views[views.length - 1].visible = true;
+			}
+			views[views.length - 1].right = views[0].right + screenWidth;
+		} else if (activeView == (views.length - 1 )) {
+			if (viewChange) {
+				views[0].visible = true;
+			}
+			views[0].right = views[views.length - 1].right - screenWidth;
+		}
+
+		label.text = JSON.stringify(Math.floor(currBearing) + ":" + (Math.round(internalBearing * 100 ) / 100) + ":" + pixelOffset);
+
 	}
 
 	var win = Ti.UI.createWindow({

@@ -13,49 +13,49 @@ exports.createHomeWindow = function() {
 		title : 'parmaVision',
 		backgroundColor : colors[lastColor],
 	});
-	
-	if( Ti.Platform.osname == 'android '){
+
+	if (Ti.Platform.osname == 'android ') {
 		orientationModes = [Ti.UI.PORTRAIT, Ti.UI.LANDSCAPE_RIGHT];
 	} else {
-		orientationModes = [ Ti.UI.PORTRAIT ];		
+		orientationModes = [Ti.UI.PORTRAIT];
 	}
 
 	var arWin = null;
 	var arWindowOpen = false;
 
-	Ti.Gesture.addEventListener('orientationchange', function(e) {
-		if( arWindowOpen ){
-			Ti.API.debug( "arWindow is open");
-		} else {
-			Ti.API.debug( "arWindow is closed");
-		}
-		if (e.source.isLandscape()) {
-			if (!arWindowOpen) {
-				arWindowOpen = true;
-				arWin = require('/ui/ar').createARWindow();
-				arWin.addEventListener('close', function() {
-					arWindowOpen = false;
-					arWin = null;
-				});
-				arWin.open();
-			}
-		} else if (e.source.isPortrait()) {
-			Ti.API.debug( 'turning back....');
-			if (arWindowOpen) {
-				arWin.doClose();
-			}
-		}
+	win.addEventListener('click', function() {
+		arWin = require('/ui/ar').createARWindow();
+		arWin.addEventListener('close', function() {
+			arWindowOpen = false;
+			arWin = null;
+		});
+		arWin.open();
 	});
 
 	/*
-
-	 var map = Ti.Map.createView({
-	 mapType : Titanium.Map.STANDARD_TYPE,
-	 animate : true,
-	 userLocation : true
+	 Ti.Gesture.addEventListener('orientationchange', function(e) {
+	 if( arWindowOpen ){
+	 Ti.API.debug( "arWindow is open");
+	 } else {
+	 Ti.API.debug( "arWindow is closed");
+	 }
+	 if (e.source.isLandscape()) {
+	 if (!arWindowOpen) {
+	 arWindowOpen = true;
+	 arWin = require('/ui/ar').createARWindow();
+	 arWin.addEventListener('close', function() {
+	 arWindowOpen = false;
+	 arWin = null;
 	 });
-
-	 win.add(map);
+	 arWin.open();
+	 }
+	 } else if (e.source.isPortrait()) {
+	 Ti.API.debug( 'turning back....');
+	 if (arWindowOpen) {
+	 arWin.doClose();
+	 }
+	 }
+	 });
 
 	 */
 
