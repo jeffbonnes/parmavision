@@ -6,3 +6,4 @@ tmp
 /manifest
 .DS_Store
 /Resources/android/.DS_Store
+/build.log
