@@ -105,10 +105,23 @@ exports.createARWindow = function(params) {
 		textAlign : 'center',
 		color : 'white',
 		backgroundColor : 'black',
-		opacity : 0.5
+		opacity : 0.5,
+		font: {
+			fontSize : '12dp'
+		}
 	});
 
 	overlay.add(label);
+
+	var radar = Ti.UI.createView({
+		backgroundImage : '/images/radar.png',
+		width : '80dp',
+		height : '80dp',
+		bottom : '10dp',
+		left : '10dp'
+	});
+
+	overlay.add(radar);
 
 	if (params.overlay) {
 		overlay.add(params.overlay);
@@ -144,10 +157,8 @@ exports.createARWindow = function(params) {
 			viewChange = true;
 			lastActiveView = activeView;
 		} else {
-			viewChange = true;
+			viewChange = false;
 		}
-
-		//Ti.API.debug('activeView=' + views[activeView].backgroundColor);
 
 		for (var i = 0; i < views.length; i++) {
 			var diff = activeView - i;
@@ -156,7 +167,6 @@ exports.createARWindow = function(params) {
 					y : centerY,
 					x : (-1 * diff * screenWidth) + (screenWidth / 2 ) - pixelOffset
 				}
-				//Ti.API.debug(views[i].backgroundColor + ' centerX=' + views[i].center.x);
 				if (viewChange) {
 					views[i].visible = true;
 				}
@@ -172,23 +182,22 @@ exports.createARWindow = function(params) {
 				y : centerY,
 				x : views[0].center.x - screenWidth
 			};
-			//Ti.API.debug(views[views.length - 1].backgroundColor + ' centerX=' + views[views.length - 1].center.x);
 			if (viewChange) {
 				views[views.length - 1].visible = true;
 			}
 		} else if (activeView == (views.length - 1 )) {
-			//views[0].right = views[views.length - 1].right - screenWidth;
 			views[0].center = {
 				y : centerY,
 				x : views[views.length - 1].center.x + screenWidth
 			};
-			//Ti.API.debug(views[0].backgroundColor + ' centerX=' + views[0].center.x);
 			if (viewChange) {
 				views[0].visible = true;
 			}
 		}
 
-		label.text = JSON.stringify(Math.floor(currBearing) + ":" + pixelOffset);
+		label.text = Math.floor(currBearing) + "\xB0";
+
+		radar.transform = Ti.UI.create2DMatrix().rotate(-1 * currBearing);
 
 	}
 
@@ -217,16 +226,26 @@ exports.createARWindow = function(params) {
 	}
 	function redrawPois(e) {
 
-		// remove any existing views
-		for (var i = 0; i < views.length; i++) {
-			var view = views[i];
-			if (view.children) {
-				if (view.children.length > 0) {
-					for (var j = view.children.length; j > 0; j--) {
-						view.remove(view.children[j - 1]);
+		try {
+			// remove any existing views
+			for (var i = 0; i < views.length; i++) {
+				var view = views[i];
+				if (view.children) {
+					if (view.children.length > 0) {
+						for (var j = view.children.length; j > 0; j--) {
+							view.remove(view.children[j - 1]);
+						}
 					}
 				}
 			}
+
+			if (radar.children.length > 0) {
+				for (var j = radar.children.length; j > 0; j--) {
+					radar.remove(view.children[j - 1]);
+				}
+			}
+		} catch (e) {
+			Ti.API.error('error removing children views');
 		}
 
 		// Draw the Points of Interest on the Views
@@ -243,7 +262,6 @@ exports.createARWindow = function(params) {
 				}
 				if (addPoint) {
 					var bearing = exports.calculateBearing(myLocation, poi);
-					Ti.API.debug('bearing=' + bearing);
 					var internalBearing = bearing / (360 / views.length);
 					var activeView = Math.floor(internalBearing) + 1;
 					if (activeView >= views.length) {
@@ -253,6 +271,7 @@ exports.createARWindow = function(params) {
 					poi.distance = distance;
 					poi.pixelOffset = pixelOffset;
 					poi.activeView = activeView;
+					poi.bearing = bearing;
 					activePois.push(poi);
 				} else {
 					Ti.API.debug(poi.title + " not added, maxDistance=" + win.maxDistance);
@@ -280,8 +299,7 @@ exports.createARWindow = function(params) {
 			var zoom = (percentFromSmallest * DELTA_ZOOM) + MIN_ZOOM;
 			// Calculate the y (farther away = higher )
 			var y = MIN_Y + (percentFromSmallest * DELTA_Y);
-			Ti.API.debug('distance=' + poi.distance);
-			Ti.API.debug('zoom=' + zoom);
+			//Ti.API.debug('distance=' + poi.distance);
 			var view = poi.view;
 			// Apply the transform
 			var transform = Ti.UI.create2DMatrix();
@@ -292,6 +310,24 @@ exports.createARWindow = function(params) {
 				y : y
 			};
 			views[poi.activeView].add(view);
+
+			// add to blip to the radar
+			// The Radar Blips ....
+			var rad = toRad(poi.bearing);
+			var relativeDistance = poi.distance / (maxDistance * 1.2);
+			var centerX = (40 + (relativeDistance * 40 * Math.sin(rad)));
+			var centerY = (40 - (relativeDistance * 40 * Math.cos(rad)));
+
+			var displayBlip = Ti.UI.createView({
+				height : '3dp',
+				width : '3dp',
+				backgroundColor : 'white',
+				borderRadius : 2,
+				top : centerY - 1,
+				left : centerX - 1
+			});
+			radar.add(displayBlip);
+
 		}
 
 	};
