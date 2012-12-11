@@ -106,7 +106,7 @@ exports.createARWindow = function(params) {
 		color : 'white',
 		backgroundColor : 'black',
 		opacity : 0.5,
-		font: {
+		font : {
 			fontSize : '12dp'
 		}
 	});
@@ -118,7 +118,8 @@ exports.createARWindow = function(params) {
 		width : '80dp',
 		height : '80dp',
 		bottom : '10dp',
-		left : '10dp'
+		left : '10dp',
+		opacity : 0.7
 	});
 
 	overlay.add(radar);
@@ -146,6 +147,7 @@ exports.createARWindow = function(params) {
 	var lastActiveView = -1;
 	var viewChange = false;
 	var centerY = screenHeight / 2;
+	var activePois;
 
 	function headingCallback(e) {
 		var currBearing = e.heading.trueHeading;
@@ -224,6 +226,12 @@ exports.createARWindow = function(params) {
 	win.assignPOIs = function(pois) {
 		win.pois = pois;
 	}
+	function poiClick(e) {
+		var poi = activePois[e.source.number];
+		alert( JSON.stringify(poi));
+		win.fireEvent('poi.click', {poi : poi });
+	}
+
 	function redrawPois(e) {
 
 		try {
@@ -249,7 +257,7 @@ exports.createARWindow = function(params) {
 		}
 
 		// Draw the Points of Interest on the Views
-		var activePois = [];
+		activePois = [];
 
 		for (var i = 0; i < win.pois.length; i++) {
 			var poi = win.pois[i];
@@ -309,6 +317,20 @@ exports.createARWindow = function(params) {
 				x : poi.pixelOffset,
 				y : y
 			};
+			if (view.clickHandler) {
+				view.clickHandler.removeEventListener('click', poiClick);
+				view.remove(view.clickHandler);
+				view.clickHandler = null;
+			}
+			var clickHandler = Ti.UI.createView({
+				width : Ti.UI.FILL,
+				height : Ti.UI.FILL
+			});
+			var number = i;
+			clickHandler.number = number;
+			clickHandler.addEventListener('click', poiClick);
+			view.add(clickHandler);
+			view.clickHandler = clickHandler;
 			views[poi.activeView].add(view);
 
 			// add to blip to the radar
@@ -323,8 +345,8 @@ exports.createARWindow = function(params) {
 				width : '3dp',
 				backgroundColor : 'white',
 				borderRadius : 2,
-				top : centerY - 1,
-				left : centerX - 1
+				top : (centerY - 1) + "dp",
+				left : (centerX - 1) + "dp"
 			});
 			radar.add(displayBlip);
 
