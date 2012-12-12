@@ -2,18 +2,8 @@ var isAndroid = Ti.Platform.osname == 'android';
 
 exports.createHomeWindow = function() {
 
-	var colors = ['red', 'yellow', 'pink', 'green', 'purple', 'orange', 'blue'];
-
-	var lastColor = Ti.App.Properties.getInt('color', 0);
-	lastColor++;
-	if (lastColor >= colors.length) {
-		lastColor = 0;
-	}
-	Ti.App.Properties.setInt('color', lastColor);
-
 	var win = Ti.UI.createWindow({
 		title : 'parmaVision',
-		backgroundColor : colors[lastColor],
 		fullScreen : false
 	});
 	win.orientationModes = [Ti.UI.PORTRAIT];

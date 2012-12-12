@@ -109,4 +109,28 @@ exports.parmas = [{
 	longitude : 145.002336,
 	link : "http://www.parmadaze.com/post/31960664632/attempt-115-maxys",
 	image : "http://media.tumblr.com/tumblr_maocyraSyE1qb69qj.jpg"
+}, {
+	rating : 7.63,
+	title : "The Union Club Hotel",
+	address : "164 Gore St. Fitzroy",
+	latitude : -37.803882,
+	longitude : 144.982383,
+	link : "http://www.parmadaze.com/post/25128588365/attempt-101-the-union-club-hotel",
+	image : "http://media.tumblr.com/tumblr_m5mtmpp85N1qb69qj.jpg"
+}, {
+	rating : 7.61,
+	title : "European Bier Café",
+	address : "120 Exhibition St. Melbourne",
+	latitude : -37.812874,
+	longitude : 144.971053,
+	link : "http://www.parmadaze.com/post/706257607/attempt-11-european-bier-cafe",
+	image : "http://media.tumblr.com/tumblr_l44v0u2Tgx1qb69qj.jpg"
+}, {
+	rating : 7.30,
+	title : "The Palmerston Hotel",
+	address : "51 Palmerson Cres. South Melbourne",
+	latitude : -37.834798,
+	longitude : 144.96976,
+	link : "http://www.parmadaze.com/post/457832467/attempt-2-the-palmerston",
+	image : "http://media.tumblr.com/tumblr_kzig23QuBb1qb69qj.jpg"
 }];
