@@ -88,6 +88,14 @@ exports.createHomeWindow = function() {
 			bottom : '5dp'
 		});
 		view.add(rating);
+		view.addEventListener('click', function(e) {
+			// Need to do this for Android for the moment
+			// because the click will fire this without a poi
+			if( ! e.poi ){
+				return;
+			}
+			alert(e.poi.title + ' got a click!');
+		});
 		parmas[i].view = view;
 
 	}

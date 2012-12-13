@@ -36,7 +36,7 @@ exports.createARWindow = function(params) {
 
 	function showAR() {
 		Ti.Geolocation.addEventListener('heading', headingCallback);
-		Ti.Geolocation.addEventListener('location', redrawPois);
+		Ti.Geolocation.addEventListener('location', locationCallback);
 		Ti.Media.showCamera({
 			success : function(event) {
 			},
@@ -59,7 +59,7 @@ exports.createARWindow = function(params) {
 
 	function closeAR() {
 		Ti.Geolocation.removeEventListener('heading', headingCallback);
-		Ti.Geolocation.removeEventListener('location', redrawPois);
+		Ti.Geolocation.removeEventListener('location', locationCallback);
 		if (!isAndroid) {
 			Ti.Media.hideCamera();
 		}
@@ -69,10 +69,14 @@ exports.createARWindow = function(params) {
 	}
 
 	var views = [];
-	var colors = ['red', 'yellow', 'pink', 'green', 'purple', 'orange', 'blue', 'aqua', 'white', 'silver'];
-	var numberOfViews = 9;
+	// background colors for debugging
 	var showColors = false;
+	var colors = ['red', 'yellow', 'pink', 'green', 'purple', 'orange', 'blue', 'aqua', 'white', 'silver'];
 
+	var numberOfViews = 9;
+	var myLocation = null;
+
+	// Create the main view - only as wide as the viewport
 	var overlay = Ti.UI.createView({
 		top : 0,
 		height : screenHeight,
@@ -81,12 +85,17 @@ exports.createARWindow = function(params) {
 		backgroundColor : 'transparent'
 	});
 
+	// Create all the view that will contain the points of interest
 	for (var i = 0; i < numberOfViews; i++) {
+		// create a view 1.6x the screen width
+		// they will overlap so any poi view that
+		// are near the edge will continue over into the
+		// 'next' view.
 		views[i] = Ti.UI.createView({
 			top : 0,
 			height : screenHeight,
 			right : 0,
-			width : screenWidth * 2,
+			width : screenWidth * 1.6,
 			visible : false
 		});
 
@@ -153,7 +162,7 @@ exports.createARWindow = function(params) {
 		var currBearing = e.heading.trueHeading;
 		var internalBearing = currBearing / (360 / views.length);
 		var activeView = Math.floor(internalBearing);
-		var pixelOffset = Math.floor((internalBearing % 1) * screenWidth);
+		var pixelOffset = screenWidth - (Math.floor((internalBearing % 1) * screenWidth));
 
 		if (activeView != lastActiveView) {
 			viewChange = true;
@@ -167,7 +176,7 @@ exports.createARWindow = function(params) {
 			if (diff >= -1 && diff <= 1) {
 				views[i].center = {
 					y : centerY,
-					x : (-1 * diff * screenWidth) + (screenWidth / 2 ) - pixelOffset
+					x : pixelOffset + (-1 * diff * screenWidth)
 				}
 				if (viewChange) {
 					views[i].visible = true;
@@ -197,12 +206,16 @@ exports.createARWindow = function(params) {
 			}
 		}
 
+		// REM this if you don't want the user to see their heading
 		label.text = Math.floor(currBearing) + "\xB0";
 
+		// Rotate the radar
 		radar.transform = Ti.UI.create2DMatrix().rotate(-1 * currBearing);
 
 	}
 
+	// Just a container window to hold all these objects
+	// user will never know
 	var win = Ti.UI.createWindow({
 		modal : true,
 		navBarHidden : true,
@@ -225,35 +238,56 @@ exports.createARWindow = function(params) {
 
 	win.assignPOIs = function(pois) {
 		win.pois = pois;
+		// TODO - something here to make sure the pois redraw
+		// even if the location doesn't update
 	}
 	function poiClick(e) {
+		Ti.API.debug('heard a click');
+		Ti.API.debug('number=' + e.source.number);
 		var poi = activePois[e.source.number];
-		alert( JSON.stringify(poi));
-		win.fireEvent('poi.click', {poi : poi });
+		var view = poi.view;
+		view.fireEvent('click', {
+			source : poi.view,
+			poi : poi
+		});
 	}
 
-	function redrawPois(e) {
+	function locationCallback(e) {
+		myLocation = e.coords;
+		redrawPois();
+	};
 
-		try {
-			// remove any existing views
-			for (var i = 0; i < views.length; i++) {
-				var view = views[i];
-				if (view.children) {
-					if (view.children.length > 0) {
-						for (var j = view.children.length; j > 0; j--) {
+	function redrawPois() {
+
+		if (!myLocation) {
+			Ti.API.warn("location not known. Can't draw pois");
+			return;
+		}
+
+		// remove any existing views
+		for (var i = 0; i < views.length; i++) {
+			var view = views[i];
+			if (view.children) {
+				if (view.children.length > 0) {
+					for (var j = view.children.length; j > 0; j--) {
+						try {
 							view.remove(view.children[j - 1]);
+						} catch (e) {
+							Ti.API.error('error removing child ' + j + ' from view');
 						}
 					}
 				}
 			}
+		}
 
-			if (radar.children.length > 0) {
-				for (var j = radar.children.length; j > 0; j--) {
+		if (radar.children.length > 0) {
+			for (var j = radar.children.length; j > 0; j--) {
+				try {
 					radar.remove(view.children[j - 1]);
+				} catch (e) {
+					Ti.API.error('error removing child ' + j + ' from radar');
 				}
 			}
-		} catch (e) {
-			Ti.API.error('error removing children views');
 		}
 
 		// Draw the Points of Interest on the Views
@@ -262,7 +296,6 @@ exports.createARWindow = function(params) {
 		for (var i = 0; i < win.pois.length; i++) {
 			var poi = win.pois[i];
 			if (poi.view) {
-				var myLocation = e.coords;
 				var distance = exports.calculateDistance(myLocation, poi);
 				var addPoint = true;
 				if (win.maxDistance && distance > win.maxDistance) {
@@ -271,11 +304,11 @@ exports.createARWindow = function(params) {
 				if (addPoint) {
 					var bearing = exports.calculateBearing(myLocation, poi);
 					var internalBearing = bearing / (360 / views.length);
-					var activeView = Math.floor(internalBearing) + 1;
+					var activeView = Math.floor(internalBearing);
 					if (activeView >= views.length) {
 						activeView = 0;
 					}
-					var pixelOffset = Math.floor((internalBearing % 1) * screenWidth);
+					var pixelOffset = Math.floor((internalBearing % 1) * screenWidth) + ((views[0].width - screenWidth) / 2);
 					poi.distance = distance;
 					poi.pixelOffset = pixelOffset;
 					poi.activeView = activeView;
@@ -301,22 +334,28 @@ exports.createARWindow = function(params) {
 		for (var i = 0; i < activePois.length; i++) {
 			var poi = activePois[i];
 			Ti.API.debug(poi.title);
+			if (showColors) {
+				Ti.API.debug('viewColor=' + views[poi.activeView].backgroundColor);
+			}
+			Ti.API.debug('bearing=' + poi.bearing);
 			// Calcuate the Scaling (for distance)
 			var distanceFromSmallest = poi.distance - minDistance;
 			var percentFromSmallest = 1 - (distanceFromSmallest / distanceDelta);
 			var zoom = (percentFromSmallest * DELTA_ZOOM) + MIN_ZOOM;
 			// Calculate the y (farther away = higher )
 			var y = MIN_Y + (percentFromSmallest * DELTA_Y);
-			//Ti.API.debug('distance=' + poi.distance);
 			var view = poi.view;
 			// Apply the transform
 			var transform = Ti.UI.create2DMatrix();
 			transform = transform.scale(zoom);
 			view.transform = transform;
+			Ti.API.debug('pixelOffset=' + poi.pixelOffset);
 			view.center = {
 				x : poi.pixelOffset,
 				y : y
 			};
+
+			// Testing Click Handlers
 			if (view.clickHandler) {
 				view.clickHandler.removeEventListener('click', poiClick);
 				view.remove(view.clickHandler);
@@ -331,7 +370,47 @@ exports.createARWindow = function(params) {
 			clickHandler.addEventListener('click', poiClick);
 			view.add(clickHandler);
 			view.clickHandler = clickHandler;
+
 			views[poi.activeView].add(view);
+
+			Ti.API.debug('viewSize=' + view.width + "," + view.height);
+
+			// need to create a second click handler
+			// on the closest view in case there is overlap
+			var clickHandler2 = Ti.UI.createView({
+				width : view.width,
+				height : view.height,
+				transform : transform
+			});
+
+			clickHandler2.number = number;
+			clickHandler2.addEventListener('click', poiClick);
+
+			var nextView;
+			var nextOffset;
+			if (poi.pixelOffset > (views[0].width / 2 )) {
+				nextView = poi.activeView + 1;
+				nextOffset = poi.pixelOffset - screenWidth;
+			} else {
+				nextView = poi.activeView - 1;
+				nextOffset = poi.pixelOffset + screenWidth;
+			}
+
+			if (nextView < 0) {
+				nextView = views.length - 1;
+			} else if (nextView == views.length) {
+				nextView = 0;
+			}
+
+			Ti.API.debug('nextView=' + nextView);
+			Ti.API.debug('nextOffset=' + nextOffset);
+
+			clickHandler2.center = {
+				x : nextOffset,
+				y : y
+			};
+			views[nextView].add(clickHandler2);
+			// End Click Handlers
 
 			// add to blip to the radar
 			// The Radar Blips ....
